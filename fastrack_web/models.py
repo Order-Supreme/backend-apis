@@ -10,23 +10,34 @@ class Restaurant(models.Model):
     phone_number = models.CharField(max_length=20, null=False)
     password = models.CharField(max_length=255, null=False)
 
+    def __str__(self):
+        return str(self.restaurant_id)
+
 
 class Table(models.Model):
     table_id = models.AutoField(primary_key=True)
     restaurant_id = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
     no_of_seats = models.PositiveSmallIntegerField(default=1)
+    isVIP = models.BooleanField(default=False)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
     isBooked = models.BooleanField(default=False)
     createdOn = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return str(self.table_id)
 
 
 class User(models.Model):
     user_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100)
-    email = models.EmailField()
+    email = models.EmailField(null=True)
     phone_number = models.CharField(max_length=20)
     payment_method = models.BooleanField(default=False)
     credit_card_info = models.TextField(blank=True, null=True)
     createdOn = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return str(self.user_id)
 
 
 class BookedTable(models.Model):
@@ -40,24 +51,45 @@ class BookedTable(models.Model):
     restaurant = models.ForeignKey(Restaurant, on_delete=models.PROTECT)
     user = models.ForeignKey(User, on_delete=models.PROTECT)
 
+    def __str__(self):
+        return str(self.booked_id)
+
 
 class Images(models.Model):
     image_id = models.AutoField(primary_key=True)
     image_path = models.CharField(max_length=255)
     createdOn = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return str(self.image_id)
+
 
 class Menu(models.Model):
     dish_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100)
     description = models.TextField()
-    price = models.DecimalField()
-    isSpecial = models.TextField(default=None)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    isSpecial = models.BooleanField(default=False)
     createdOn = models.DateTimeField(auto_now_add=True)
     updatedOn = models.DateTimeField(auto_now=True)
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
     images = models.ForeignKey(Images, on_delete=models.PROTECT)
 
+    def __str__(self):
+        return str(self.dish_id)
+
+class Inventory(models.Model):
+    inventory_id = models.AutoField(primary_key=True)
+    inventory_name = models.CharField(max_length=255)
+    quantity = models.PositiveIntegerField(default=1)
+    measurement = models.CharField(max_length=40, null=True)
+    notice_if_below = models.PositiveIntegerField(default=10)
+    createdOn = models.DateTimeField(auto_now_add=True)
+    updatedOn = models.DateTimeField(auto_now=True)
+    update_remark = models.TextField(default=None)
+
+    def __str__(self):
+        return str(self.inventory_id)
 
 class Order(models.Model):
     ORDER_STATUS = [
@@ -73,15 +105,25 @@ class Order(models.Model):
     special_requests = models.TextField(blank=True, null=True)
     order_status = models.CharField(
         max_length=100, choices=ORDER_STATUS, default=ORDER_STATUS[0])
+    wait_time = models.TimeField()
+    isTakeaway = models.BooleanField(default=False)
+    createdOn = models.DateTimeField(auto_now_add=True)
     booked_table = models.ForeignKey(BookedTable, on_delete=models.PROTECT)
+    inventories = models.ForeignKey(Inventory, on_delete=models.PROTECT)
     dish = models.ManyToManyField(Menu)
 
+    def __str__(self):
+        return str(self.order_id
+)
 
 class Payments(models.Model):
     payment_id = models.AutoField(primary_key=True)
-    order_id = models.ForeignKey('Order', on_delete=models.PROTECT)
-    user_id = models.ForeignKey('User', on_delete=models.PROTECT)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=20)
     createdOn = models.DateTimeField(auto_now_add=True)
     payment_status = models.BooleanField(default=False)
+    order_id = models.ForeignKey('Order', on_delete=models.PROTECT)
+    user_id = models.ForeignKey('User', on_delete=models.PROTECT)
+
+    def __str__(self):
+        return str(self.payment_id)
