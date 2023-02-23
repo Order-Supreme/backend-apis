@@ -4,6 +4,7 @@ from . import views
 
 router = SimpleRouter()
 router.register("fastrack/restaurant", views.RestaurantViewSet)
+router.register("fastrack/customer", views.CustomerViewSet)
 router.register("fastrack/table", views.TableViewSet)
 router.register("fastrack/payment", views.PaymentViewSet)
 router.register("fastrack/image", views.ImageViewSet)

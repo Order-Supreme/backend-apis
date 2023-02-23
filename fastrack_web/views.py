@@ -4,7 +4,8 @@ from rest_framework import status
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import ModelViewSet, GenericViewSet
+from rest_framework.mixins import CreateModelMixin, RetrieveModelMixin, UpdateModelMixin
 from .models import *
 from .serializers import *
 from .filters import RestaurantFilter
@@ -15,14 +16,14 @@ from .pagination import DefaultPagination
 def home(request):
     return Response({"name": "Fast Track Restaurant System", "version": 1.0, "Developed by": "Zelalem Gizachew"})
 
-class RestaurantViewSet(ModelViewSet):
+class RestaurantViewSet(CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, GenericViewSet):
     queryset = Restaurant.objects.all()
     serializer_class = RestaurantSerializer
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_class = RestaurantFilter
-    pagination_class = DefaultPagination
-    search_fields = ['name']
-    order_fields = ['map_link']
+    # filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    # filterset_class = RestaurantFilter
+    # pagination_class = DefaultPagination
+    # search_fields = ['name']
+    # order_fields = ['map_link']
 
 class TableViewSet(ModelViewSet):
     queryset = Table.objects.all()
@@ -52,6 +53,9 @@ class InventoryViewSet(ModelViewSet):
     queryset = Inventory.objects.all()
     serializer_class = InventorySerializer
 
+class CustomerViewSet(CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, GenericViewSet):
+    queryset = Customer.objects.all()
+    serializer_class = CustomerSerializer
 
 
 
