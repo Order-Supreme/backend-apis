@@ -1,33 +1,52 @@
-from django.shortcuts import render, HttpResponse
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.filters import SearchFilter, OrderingFilter
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, GenericViewSet
 from rest_framework.mixins import CreateModelMixin, RetrieveModelMixin, UpdateModelMixin
+from rest_framework.permissions import IsAuthenticated
 from .models import *
 from .serializers import *
 from .filters import RestaurantFilter
 from .pagination import DefaultPagination
+from .permissions import IsRestaurantOrReadOnly
 
 
 @api_view()
 def home(request):
     return Response({"name": "Fast Track Restaurant System", "version": 1.0, "Developed by": "Zelalem Gizachew"})
 
-class RestaurantViewSet(CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, GenericViewSet):
+class RestaurantViewSet(ModelViewSet):
     queryset = Restaurant.objects.all()
     serializer_class = RestaurantSerializer
-    # filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    # filterset_class = RestaurantFilter
-    # pagination_class = DefaultPagination
-    # search_fields = ['name']
-    # order_fields = ['map_link']
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_class = RestaurantFilter
+    pagination_class = DefaultPagination
+    search_fields = ['name']
+    order_fields = ['map_link']
+    permission_classes = [IsRestaurantOrReadOnly]
+
+    @action(detail=False, methods=['GET', 'PUT', 'POST'], permission_classes=[IsAuthenticated, IsRestaurantOrReadOnly])
+    def me(self, request):
+        # restaurant = Restaurant.objects.get(user_id=request.user.id)
+        restaurant =  get_object_or_404(Restaurant, user_id=request.user.id)
+        if request.method == 'GET':
+            serializer = RestaurantSerializer(restaurant)
+            return Response(serializer.data)
+        elif request.method == 'PUT':
+            serializer = RestaurantSerializer(restaurant, data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
 
 class TableViewSet(ModelViewSet):
     queryset = Table.objects.all()
     serializer_class = TableSerializer
+    permission_classes = [IsRestaurantOrReadOnly]
+
+    
 
 class PaymentViewSet(ModelViewSet):
     queryset = Payments.objects.all()
@@ -47,7 +66,16 @@ class BookedTableViewSet(ModelViewSet):
 
 class OrderViewSet(ModelViewSet):
     queryset = Order.objects.all()
-    serializer_class = OrderSerializer
+    pagination_class = DefaultPagination
+    # serializer_class = OrderSerializer
+
+    def get_serializer_class(self):
+        if self.request.method in ('POST', 'PUT'):
+            return CreateOrderSerializer
+        else:
+            return OrderSerializer
+
+
 
 class InventoryViewSet(ModelViewSet):
     queryset = Inventory.objects.all()
@@ -56,6 +84,18 @@ class InventoryViewSet(ModelViewSet):
 class CustomerViewSet(CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, GenericViewSet):
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
+
+    @action(detail=False, methods=['GET', 'PUT'])
+    def me(self, request):
+        (customer, created) = Customer.objects.get_or_create(user_id=request.user.id)
+        if request.method == 'GET':
+            serializer = CustomerSerializer(customer)
+            return Response(serializer.data)
+        elif request.method == 'PUT':
+            serializer = CustomerSerializer(customer, data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
 
 
 
