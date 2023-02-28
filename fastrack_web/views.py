@@ -26,18 +26,8 @@ class RestaurantViewSet(ModelViewSet):
     filterset_class = RestaurantFilter
     pagination_class = DefaultPagination
     search_fields = ['name']
-    order_fields = ['map_link']
-    # permission_classes = [IsRestaurantOrReadOnly]
-
+    ordering_fields = ['name']
     permission_classes = [IsRestaurantOrAdmin]
-
-    # def perform_create(self, serializer):
-    #     user = self.request.user
-    #     # Only the authenticated restaurant user can create a restaurant profile
-    #     if user.is_authenticated and user.user_type == 'R':
-    #         serializer.save(user=user)
-    #     else:
-    #         raise PermissionDenied('You must be a customer to create a profile')
     
     def perform_create(self, serializer):
         user = self.request.user
@@ -66,11 +56,7 @@ class RestaurantViewSet(ModelViewSet):
             return Response(serializer.data)
         # An authenticated super user can list all restaurant profiles
         else:
-            restaurants = Restaurant.objects.all()
-            serializer = RestaurantSerializer(restaurants, many=True)
-            return Response(serializer.data)
-        # else:
-        #     return Response("Access Denied!", status=status.HTTP_405_METHOD_NOT_ALLOWED)
+            return super().list(request)
 
     @action(detail=False, methods=['GET', 'PUT'])
     def me(self, request):
@@ -155,6 +141,7 @@ class InventoryViewSet(ModelViewSet):
 class CustomerViewSet(ModelViewSet):
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
+    pagination_class = DefaultPagination
     permission_classes = [IsCustomerOrAdmin]
 
     def perform_create(self, serializer):
@@ -182,9 +169,7 @@ class CustomerViewSet(ModelViewSet):
             return Response(serializer.data)
         # An authenticated super user can list all customer profiles
         elif user.is_authenticated and user.user_type == 'S':
-            customers = Customer.objects.all()
-            serializer = CustomerSerializer(customers, many=True)
-            return Response(serializer.data)
+            return super().list(request)
         else:
             return Response("Access Denied!", status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
