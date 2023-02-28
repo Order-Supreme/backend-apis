@@ -8,9 +8,7 @@ class Restaurant(models.Model):
     name = models.CharField(max_length=100, null=False)
     map_link = models.TextField(null=True)
     location = models.TextField(null=False)
-    # email = models.EmailField(null=True)
     phone_number = models.CharField(max_length=20, null=False)
-    # password = models.CharField(max_length=255, null=False)
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     def __str__(self):
@@ -37,7 +35,6 @@ class Table(models.Model):
 class Customer(models.Model):
     customer_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100)
-    # email = models.EmailField(null=True)
     phone_number = models.CharField(max_length=20)
     payment_method = models.BooleanField(default=False)
     credit_card_info = models.TextField(blank=True, null=True)

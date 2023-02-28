@@ -31,7 +31,7 @@ class RestaurantViewSet(ModelViewSet):
     @action(detail=False, methods=['GET', 'PUT', 'POST'], permission_classes=[IsAuthenticated, IsRestaurantOrReadOnly])
     def me(self, request):
         # restaurant = Restaurant.objects.get(user_id=request.user.id)
-        restaurant =  get_object_or_404(Restaurant, user_id=request.user.id)
+        restaurant =  get_object_or_404(Restaurant, user=request.user.id)
         if request.method == 'GET':
             serializer = RestaurantSerializer(restaurant)
             return Response(serializer.data)
@@ -44,7 +44,12 @@ class RestaurantViewSet(ModelViewSet):
 class TableViewSet(ModelViewSet):
     queryset = Table.objects.all()
     serializer_class = TableSerializer
-    permission_classes = [IsRestaurantOrReadOnly]
+    permission_classes = [IsAuthenticated, IsRestaurantOrReadOnly]
+
+    def get_queryset(self):
+        if self.action == 'list':
+            return self.queryset.filter(restaurant__user=self.request.user)
+        return self.queryset
 
     
 
@@ -65,9 +70,26 @@ class BookedTableViewSet(ModelViewSet):
     serializer_class = BookedTableSerializer
 
 class OrderViewSet(ModelViewSet):
-    queryset = Order.objects.all()
+    # queryset = Order.objects.all()
     pagination_class = DefaultPagination
+    permission_classes = [IsAuthenticated]
     # serializer_class = OrderSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+
+        if user.user_type == 'R':
+            isExist = Restaurant.objects.filter(user_id=user.id).exists()
+            print(f'================ {user.id}')
+            if isExist:
+                restaurant_id = Restaurant.objects.only('restaurant_id').get(user_id=user.id)
+                return Order.objects.prefetch_related('booked_table').filter(booked_table__restaurant=restaurant_id)
+            else:
+                return Order.objects.none()
+                
+        elif  user.user_type == 'C':
+            customer_id = Customer.objects.only('customer_id').get(user_id=user.id)
+            return Order.objects.prefetch_related('booked_table').filter(booked_table__customer=customer_id)
 
     def get_serializer_class(self):
         if self.request.method in ('POST', 'PUT'):

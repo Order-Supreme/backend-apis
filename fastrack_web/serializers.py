@@ -24,12 +24,16 @@ class MenuSerializer(serializers.ModelSerializer):
         fields = ['dish_id', 'name', 'description', 'price', 'isSpecial', 'createdOn', 'updatedOn', 'restaurant', 'images']
 
 class OrderSerializer(serializers.ModelSerializer):
+    total_price = serializers.SerializerMethodField(method_name='get_total_price')
     class Meta:
         model = Order
-        fields = ['order_id', 'customer_name', 'quantity', 'special_requests', 'order_status', 'wait_time', 'isTakeaway', 'createdOn', 'booked_table', 'dish']
+        fields = ['order_id', 'customer_name', 'quantity', 'total_price', 'special_requests', 'order_status', 'wait_time', 'isTakeaway', 'createdOn', 'booked_table', 'dish']
     
     booked_table = BookedTableSerializer(required=True)
     dish = MenuSerializer(many=True, required=True)
+
+    def get_total_price(self, order: Order):
+        return 0
 
 class CreateOrderSerializer(serializers.ModelSerializer):
     class Meta:

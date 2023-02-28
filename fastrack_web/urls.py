@@ -10,7 +10,7 @@ router.register("fastrack/payment", views.PaymentViewSet)
 router.register("fastrack/image", views.ImageViewSet)
 router.register("fastrack/menu", views.MenuViewSet)
 router.register("fastrack/booked_table", views.BookedTableViewSet)
-router.register("fastrack/order", views.OrderViewSet)
+router.register("fastrack/order", views.OrderViewSet, basename='order')
 router.register("fastrack/inventory", views.InventoryViewSet)
 
 urlpatterns = router.urls
