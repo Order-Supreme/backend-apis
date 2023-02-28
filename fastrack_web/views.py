@@ -1,5 +1,5 @@
 from django.shortcuts import get_object_or_404
-from django_filters.rest_framework import DjangoFilterBackend
+from django.core.exceptions import PermissionDenied
 from rest_framework import status
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.decorators import api_view, action
@@ -7,11 +7,12 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, GenericViewSet
 from rest_framework.mixins import CreateModelMixin, RetrieveModelMixin, UpdateModelMixin
 from rest_framework.permissions import IsAuthenticated
+from django_filters.rest_framework import DjangoFilterBackend
 from .models import *
 from .serializers import *
 from .filters import RestaurantFilter
 from .pagination import DefaultPagination
-from .permissions import IsRestaurantOrReadOnly
+from .permissions import *
 
 
 @api_view()
@@ -26,25 +27,73 @@ class RestaurantViewSet(ModelViewSet):
     pagination_class = DefaultPagination
     search_fields = ['name']
     order_fields = ['map_link']
-    permission_classes = [IsRestaurantOrReadOnly]
+    # permission_classes = [IsRestaurantOrReadOnly]
 
-    @action(detail=False, methods=['GET', 'PUT', 'POST'], permission_classes=[IsAuthenticated, IsRestaurantOrReadOnly])
+    permission_classes = [IsRestaurantOrAdmin]
+
+    # def perform_create(self, serializer):
+    #     user = self.request.user
+    #     # Only the authenticated restaurant user can create a restaurant profile
+    #     if user.is_authenticated and user.user_type == 'R':
+    #         serializer.save(user=user)
+    #     else:
+    #         raise PermissionDenied('You must be a customer to create a profile')
+    
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.is_authenticated and user.user_type == 'R':
+            if hasattr(user, 'restaurant'):
+                raise PermissionDenied('A profile for this restaurant already exists')
+            serializer.save(user=user)
+        else:
+            raise PermissionDenied('You must be a restaurant to create a profile')
+
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        # Only the authenticated customer user can update user_profile
+        if user.is_authenticated and user.user_type == 'R':
+            serializer.save(user=user)
+        else:
+            raise PermissionDenied('You must be a customer to update your profile')
+    
+    def list(self, request):
+        user = self.request.user
+        # An authenticated restaurant user can only view his/her user profile
+        if user.is_authenticated and user.user_type == 'R':
+            restaurant_profile = Restaurant.objects.get(user_id=request.user.id)
+            serializer = self.get_serializer(restaurant_profile)
+            return Response(serializer.data)
+        # An authenticated super user can list all restaurant profiles
+        else:
+            restaurants = Restaurant.objects.all()
+            serializer = RestaurantSerializer(restaurants, many=True)
+            return Response(serializer.data)
+        # else:
+        #     return Response("Access Denied!", status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    @action(detail=False, methods=['GET', 'PUT'])
     def me(self, request):
-        # restaurant = Restaurant.objects.get(user_id=request.user.id)
-        restaurant =  get_object_or_404(Restaurant, user=request.user.id)
-        if request.method == 'GET':
-            serializer = RestaurantSerializer(restaurant)
-            return Response(serializer.data)
-        elif request.method == 'PUT':
-            serializer = RestaurantSerializer(restaurant, data=request.data)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data)
+        user = self.request.user
+        # An authenticated restaurant can use this end point
+        if user.is_authenticated and user.user_type == 'R':
+            restaurant_profile = Restaurant.objects.get(user_id=request.user.id)
+            # An authenticated restaurant can view his/her profile
+            if request.method == 'GET':
+                serializer = self.get_serializer(restaurant_profile)
+                return Response(serializer.data)
+            elif request.method == 'PUT':
+                serializer = RestaurantSerializer(restaurant_profile, data=request.data)
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+                return Response(serializer.data)
+        else:
+            return Response("Access Denied!", status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 class TableViewSet(ModelViewSet):
     queryset = Table.objects.all()
     serializer_class = TableSerializer
-    permission_classes = [IsAuthenticated, IsRestaurantOrReadOnly]
+    # permission_classes = [IsAuthenticated, IsRestaurantOrReadOnly]
 
     def get_queryset(self):
         if self.action == 'list':
@@ -72,7 +121,7 @@ class BookedTableViewSet(ModelViewSet):
 class OrderViewSet(ModelViewSet):
     # queryset = Order.objects.all()
     pagination_class = DefaultPagination
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
     # serializer_class = OrderSerializer
 
     def get_queryset(self):
@@ -103,34 +152,56 @@ class InventoryViewSet(ModelViewSet):
     queryset = Inventory.objects.all()
     serializer_class = InventorySerializer
 
-class CustomerViewSet(CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, GenericViewSet):
+class CustomerViewSet(ModelViewSet):
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
+    permission_classes = [IsCustomerOrAdmin]
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        # Only the authenticated customer user can create a customer profile
+        if user.is_authenticated and user.user_type == 'C':
+            serializer.save(user=user)
+        else:
+            raise PermissionDenied('You must be a customer to create a profile')
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        # Only the authenticated customer user can update user_profile
+        if user.is_authenticated and user.user_type == 'C':
+            serializer.save(user=user)
+        else:
+            raise PermissionDenied('You must be a customer to update your profile')
+    
+    def list(self, request):
+        user = self.request.user
+        # An authenticated customer user can only view his/her user profile
+        if user.is_authenticated and user.user_type == 'C':
+            customer_profile = Customer.objects.get(user_id=request.user.id)
+            serializer = self.get_serializer(customer_profile)
+            return Response(serializer.data)
+        # An authenticated super user can list all customer profiles
+        elif user.is_authenticated and user.user_type == 'S':
+            customers = Customer.objects.all()
+            serializer = CustomerSerializer(customers, many=True)
+            return Response(serializer.data)
+        else:
+            return Response("Access Denied!", status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     @action(detail=False, methods=['GET', 'PUT'])
     def me(self, request):
-        (customer, created) = Customer.objects.get_or_create(user_id=request.user.id)
-        if request.method == 'GET':
-            serializer = CustomerSerializer(customer)
-            return Response(serializer.data)
-        elif request.method == 'PUT':
-            serializer = CustomerSerializer(customer, data=request.data)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data)
-
-
-
-# @api_view(['GET', 'POST'])
-# def restaurant_all(request):
-#     if request.method == 'GET':
-#         restaurant_dataset = Restaurant.objects.prefetch_related('table_set', 'bookedtable_set', 'menu_set').all()
-#         serializers = RestaurantSerializer(restaurant_dataset, many=True)
-#         return Response(serializers.data)
-#     elif request.method == 'POST':
-#         serializers = RestaurantSerializer(data=request.data)
-#         serializers.is_valid(raise_exception=True)
-#         serializers.save()
-#         return Response(serializers.data, status=status.HTTP_201_CREATED)
-#     else:
-#         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        user = self.request.user
+        # An authenticated customer can use this end point
+        if user.is_authenticated and user.user_type == 'C':
+            customer_profile = Customer.objects.get(user_id=request.user.id)
+            # An authenticated customer can view his/her profile
+            if request.method == 'GET':
+                serializer = self.get_serializer(customer_profile)
+                return Response(serializer.data)
+            elif request.method == 'PUT':
+                serializer = CustomerSerializer(customer_profile, data=request.data)
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+                return Response(serializer.data)
+        else:
+            return Response("Access Denied!", status=status.HTTP_405_METHOD_NOT_ALLOWED)

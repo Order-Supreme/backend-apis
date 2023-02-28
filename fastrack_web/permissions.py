@@ -33,29 +33,48 @@ class IsCustomerOrReadOnly(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         return obj.user == request.user
 
-# class RestaurantViewSet(ModelViewSet):
-#     queryset = Restaurant.objects.all()
-#     serializer_class = RestaurantSerializer
-#     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-#     filterset_class = RestaurantFilter
-#     pagination_class = DefaultPagination
-#     search_fields = ['name']
-#     order_fields = ['map_link']
-#     permission_classes = [IsRestaurantOrReadOnly]
+class IsRestaurantOrAdmin(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if request.user.is_superuser:
+            return request.method in permissions.SAFE_METHODS # allow read-only for admin
+        elif obj.user == request.user and obj.user.user_type == 'R':
+            return True # allow customer to read and update their own profile
+        else:
+            return False
 
-#     def get_queryset(self):
-#         if self.action == 'list':
-#             return self.queryset.filter(user=self.request.user)
-#         return self.queryset
+class IsCustomerOrAdmin(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if request.user.is_superuser:
+            return request.method in permissions.SAFE_METHODS # allow read-only for admin
+        elif obj.user == request.user and obj.user.user_type == 'C':
+            return True # allow customer to read and update their own profile
+        else:
+            return False
 
-#     @action(detail=False, methods=['GET', 'PUT', 'POST'], permission_classes=[IsAuthenticated, IsRestaurantOrReadOnly])
-#     def me(self, request):
-#         restaurant = get_object_or_404(Restaurant, user=request.user)
-#         if request.method == 'GET':
-#             serializer = RestaurantSerializer(restaurant)
-#             return Response(serializer.data)
-#         elif request.method == 'PUT':
-#             serializer = RestaurantSerializer(restaurant, data=request.data)
-#             serializer.is_valid(raise_exception=True)
-#             serializer.save()
-#             return Response(serializer.data)
+
+
+
+# class CustomerProfileViewSet(ModelViewSet):
+#     queryset = CustomerProfile.objects.all()
+#     serializer_class = CustomerProfileSerializer
+#     permission_classes = [IsCustomerOrAdmin]
+
+#     def perform_create(self, serializer):
+#         user = self.request.user
+#         if user.is_authenticated and user.user_type == 'customer':
+#             serializer.save(user=user)
+#         else:
+#             raise PermissionDenied('You must be a customer to create a profile')
+
+#     def perform_update(self, serializer):
+#         user = self.request.user
+#         if user.is_authenticated and user.user_type == 'customer':
+#             serializer.save(user=user)
+#         else:
+#             raise PermissionDenied('You must be a customer to update your profile')
+
+#     @action(detail=False, methods=['get'])
+#     def my_profile(self, request):
+#         customer_profile = CustomerProfile.objects.get(user=request.user)
+#         serializer = self.get_serializer(customer_profile)
+#         return Response(serializer.data)

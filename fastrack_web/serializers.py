@@ -63,8 +63,7 @@ class TableSerializer(serializers.ModelSerializer):
 
 
 class CustomerSerializer(serializers.ModelSerializer):
-
-    user_id = serializers.IntegerField()
+    user_id = serializers.IntegerField(read_only=True)
     class Meta:
         model = Customer
         fields = ['customer_id', 'user_id', 'phone_number', 'payment_method', 'credit_card_info', 'createdOn']
@@ -72,13 +71,12 @@ class CustomerSerializer(serializers.ModelSerializer):
 
 class RestaurantSerializer(serializers.ModelSerializer):
     user_id = serializers.IntegerField(read_only=True)
-    # user = serializers.IntegerField(read_only=True)
     class Meta:
         model = Restaurant
-        fields = ['restaurant_id', 'user_id', 'name', 'map_link', 'location', 'phone_number', 'table_set', 'bookedtable_set', 'menu_set']
+        fields = ['restaurant_id', 'user_id', 'name', 'map_link', 'location', 'phone_number']
 
-    table_set = TableSerializer(many=True, required=False)
-    bookedtable_set = BookedTableSerializer(many=True, required=False)
-    menu_set = MenuSerializer(many=True, required=False)
+    # table_set = TableSerializer(many=True, required=False)
+    # bookedtable_set = BookedTableSerializer(many=True, required=False)
+    # menu_set = MenuSerializer(many=True, required=False)
 
 
