@@ -19,7 +19,7 @@ class Restaurant(models.Model):
 
 class Table(models.Model):
     table_id = models.AutoField(primary_key=True)
-    restaurant_id = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
     no_of_seats = models.PositiveSmallIntegerField(default=1)
     isVIP = models.BooleanField(default=False)
     price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -60,18 +60,13 @@ class BookedTable(models.Model):
     def __str__(self):
         return str(self.booked_id)
 
-
-
-
-class Images(models.Model):
-    image_id = models.AutoField(primary_key=True)
-    image_path = models.CharField(max_length=255)
+class ImageModel(models.Model):
     createdOn = models.DateTimeField(auto_now_add=True)
+    image = models.ImageField(upload_to='images/')
+    image_path = models.CharField(max_length=200, blank=True)
 
     def __str__(self):
-        return str(self.image_id)
-
-
+        return str(self.id)
 
 
 class Menu(models.Model):
@@ -83,7 +78,7 @@ class Menu(models.Model):
     createdOn = models.DateTimeField(auto_now_add=True)
     updatedOn = models.DateTimeField(auto_now=True)
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
-    images = models.ForeignKey(Images, on_delete=models.PROTECT)
+    image = models.ForeignKey(ImageModel, on_delete=models.PROTECT, null=True)
 
     def __str__(self):
         return str(self.dish_id)
@@ -99,6 +94,7 @@ class Inventory(models.Model):
     createdOn = models.DateTimeField(auto_now_add=True)
     updatedOn = models.DateTimeField(auto_now=True)
     update_remark = models.TextField(default=None)
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
 
     def __str__(self):
         return str(self.inventory_id)
@@ -127,8 +123,7 @@ class Order(models.Model):
     dish = models.ManyToManyField(Menu)
 
     def __str__(self):
-        return str(self.order_id
-)
+        return str(self.order_id)
 
 
 
