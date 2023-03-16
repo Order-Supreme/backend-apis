@@ -26,8 +26,8 @@ class IsRestaurantOrAdmin(permissions.BasePermission):
 class IsCustomerOrAdmin(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.user.is_superuser or obj.user.user_type == 'R':
-            return request.method in permissions.SAFE_METHODS # allow read-only for admin
+            return request.method in permissions.SAFE_METHODS # allow read-only for admin & restaurant
         elif obj.user == request.user and obj.user.user_type == 'C':
-            return True # allow restaurant to read and update their own profile
+            return True # allow customer to read and update their own profile
         else:
             return False

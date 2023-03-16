@@ -94,7 +94,7 @@ class TableViewSet(ModelViewSet):
     queryset = Table.objects.all()
     serializer_class = TableSerializer
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['restaurant']
+    filterset_fields = ['restaurant', 'isBooked']
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
@@ -220,14 +220,16 @@ class BookedTableViewSet(ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.user_type == 'C':
-            isExist = BookedTable.objects.filter(customer=user.id).exists()
+            customer_id = Customer.objects.only('customer_id').get(user=user.id)
+            isExist = BookedTable.objects.filter(customer=customer_id).exists()
             if isExist:
-                return BookedTable.objects.filter(customer=user.customer)
+                return BookedTable.objects.filter(customer=customer_id)
             return BookedTable.objects.none()
         elif user.user_type == 'R':
-            isExist = BookedTable.objects.filter(restaurant=user.id).exists()
+            restaurant_id = Customer.objects.only('restaurant_id').get(user=user.id)
+            isExist = BookedTable.objects.filter(restaurant=restaurant_id).exists()
             if isExist:
-                return BookedTable.objects.filter(restaurant=user.id)
+                return BookedTable.objects.filter(restaurant=restaurant_id)
             return BookedTable.objects.none()
         return BookedTable.objects.none()
 
@@ -235,7 +237,10 @@ class BookedTableViewSet(ModelViewSet):
         user = self.request.user
         if user.is_authenticated and user.user_type == 'C':
             customer = self.request.user.customer
+            print(customer)
             serializer.save(customer=customer)
+        else:
+            raise PermissionDenied('You must be a customer to book a table.')
 
     
 
@@ -324,6 +329,7 @@ class CustomerViewSet(ModelViewSet):
     
     def list(self, request):
         user = self.request.user
+        print(user.user_type)
         # An authenticated customer user can only view his/her user profile
         if user.is_authenticated and user.user_type == 'C':
             isExist = Customer.objects.filter(user_id=request.user.id).exists()
